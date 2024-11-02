@@ -1,4 +1,5 @@
-import User from "../models/User"
+import User from "../models/User.js"
+import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
 
@@ -10,11 +11,18 @@ const generateToken = (userId) => {
 
 export const signup = async(req,res) => {
     const {username, password} = req.body;
-    try{
-        const user = await User.create({username, password});
-        res.json({token: generateToken(user._id)});
+    try {
+        const existingUser = await User.findOne({username});
+        if(existingUser){
+            return res.status(400).json({error: "User already exists"});
+        }
+
+        const user = new User({username, password: await bcrypt.hash(password, 10)});
+        await user.save();
+        res.status(201).json({message: "User created successfully"});
     }catch(error){
-        res.status(400).json({error: 'User already exists'});
+        console.error(error);
+        res.status(500).json({error: "Server error"});
     }
 };
 
